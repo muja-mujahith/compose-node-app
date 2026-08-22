@@ -1,0 +1,96 @@
+services:
+  app:
+    init: true
+    build: .
+    restart: unless-stopped
+    stop_grace_period: 30s
+
+    mem_limit: 256m
+    cpus: 0.5
+
+    expose:
+      - "3000"
+
+    networks:
+      - frontend
+      - backend
+      - database
+
+    volumes:
+      - C:\docker-learning\compose-node-app\mount:/data
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 33
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.0
+
+    mem_limit: 256m
+    cpus: 0.5
+
+    environment:
+      # MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    
+    secrets:
+      - mysql_root_password
+
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+    networks:
+      - database
+
+    healthcheck:
+      test: ["CMD-SHELL","mysqladmin ping -h localhost -uroot -p\"$$(cat /run/secrets/mysql_root_password)\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  nginx:
+    image: nginx:alpine
+
+    mem_limit: 256m
+    cpus: 0.5
+
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app
+
+    networks:
+      - backend
+
+  adminer:
+    image: adminer:latest
+    profiles:
+      - tools
+    ports:
+      - "8081:8080"
+    networks:
+      - database
+    depends_on:
+      mysql:
+        condition: service_healthy
+        
+networks:
+  frontend:
+  backend:
+  database:
+
+volumes:
+  mysql-data:
+
+secrets:
+  mysql_root_password:
+    file: ./secrets/mysql_root_password.txt

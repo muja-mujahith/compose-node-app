@@ -1,0 +1,15 @@
+services:
+  app:
+    environment:
+      NODE_ENV: development
+
+    mem_limit: 128m
+    cpus: 0.25
+
+    volumes:
+      - C:\docker-learning\compose-node-app\mount:/data
+      - C:\docker-learning\compose-node-app:/app
+
+  nginx:
+    ports: 
+      - "9090:80"
