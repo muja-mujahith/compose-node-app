@@ -25,3 +25,6 @@ jobs:
 
       - name: Run test
         run: npm test
+
+      - name: Build Docker Image
+        run: docker build -t compose-node-app:${{ github.sha }} .
