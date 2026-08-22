@@ -27,4 +27,7 @@ jobs:
         run: npm test
 
       - name: Build Docker Image
-        run: docker build -t compose-node-app:${{ github.sha }} .
+        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/compose-node-app:${{ github.sha }} .
+
+      - name: Push docker image to the registry
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME  }}/compose-node-app:${{ github.sha }}
