@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD
 
 on:
   push:
@@ -36,3 +36,39 @@ jobs:
 
       - name: Push Docker image
         run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/compose-node-app:${{ github.sha }}
+
+  deploy:
+    needs: test
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy with Docker Compose
+        env:
+          APP_VERSION: ${{ github.sha }}
+        run: |
+          docker compose -f compose.yaml -f compose.prod.yaml pull
+          docker compose -f compose.yaml -f compose.prod.yaml up -d
+
+      - name: Check deployment
+        env:
+          APP_VERSION: ${{ github.sha }}
+        run: |
+          docker compose -f compose.yaml -f compose.prod.yaml ps
+
+      - name: Health check
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://localhost:8080/health; then
+              echo "Application is healthy"
+              exit 0
+            fi
+            echo "Waiting for application..."
+            sleep 2
+          done
+
+          echo "Application failed health check"
+          docker compose -f compose.yaml -f compose.prod.yaml logs
+          exit 1
